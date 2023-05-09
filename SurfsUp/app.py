@@ -1,17 +1,20 @@
+"""
+Matthew Fernandez
+5/9/2023
+Flask API based on the queries from climate_starter.ipynb
+"""
+
 # Import the dependencies.
 import sqlalchemy
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func, inspect
 
-from flask import Flask, render_template, request, abort
-
-
+from flask import Flask, render_template, request, abort, jsonify
 
 #################################################
 # Database Setup
 #################################################
-
 
 # reflect an existing database into a new model
 engine = create_engine("sqlite:///../Resources/hawaii.sqlite")
@@ -34,15 +37,107 @@ session = Session(engine)
 app = Flask(__name__)
 
 
-
 #################################################
 # Flask Routes
 #################################################
 # Initial parameters to render index.html 
 @app.route("/")
 def index():
+    # return (
+    #      f"All Available Routes:<br/>"
+    #     f"/api/v1.0/precipitation<br/>"
+    #     f"/api/v1.0/stations<br/>"
+    #     f"/api/v1.0/tobs<br/>"
+    # )
     return render_template("index.html", err_msg="")
 
+@app.route('/api/v1.0/precipitation')
+def precipitation():
+    # Perform a query to retrieve the data and precipitation scores
+    sql_statement = """
+    SELECT date, prcp
+    FROM measurement
+    ORDER BY date ASC;
+    """
+
+    # Save the query results as a Pandas DataFrame. Explicitly set the column names
+    df_date_precep = pd.read_sql(sql_statement, engine)
+
+    # Sort the dataframe by date
+    df_date_precep.sort_values(by="date", inplace=True)
+    df_date_precep['date'].iloc[-1]
+    values_int = []
+    # extract year month and day from the most recent date value
+    for i in df_date_precep['date'].iloc[-1].split('-'):
+        values_int.append(int(i))
+    yr, month, day = values_int
+
+    query_date = dt.date(yr, month, day) - dt.timedelta(days=365)
+
+    data = session.query(Measurement.date, Measurement.prcp).\
+                    filter(Measurement.date >= query_date).all()
+    df_12month_precip = pd.DataFrame(data, columns=['date', 'prcp'])
+    # define keys and values for dictionary to return 
+    keys = df_12month_precip['date']
+    values = df_12month_precip['prcp']
+    dict_of_12_month_precipitation = {}
+    # add key and value to new dictionary
+    for i, key in enumerate(keys.tolist()):
+        dict_of_12_month_precipitation[key] = values.tolist()[i]
+    
+    return jsonify(dict_of_12_month_precipitation)
+
+@app.route('/api/v1.0/stations')
+def stations():
+    # return a list of all stations
+    stations_tuple = session.query(Measurement.station).group_by(Measurement.station).\
+                order_by(func.count(Measurement.station).desc()).all()
+    stations_list = []
+    for val in stations_tuple:
+        stations_list.append(val[0])
+
+    return jsonify(stations_list)
+
+
+@app.route('/api/v1.0/tobs')
+def tobs():
+
+    # Query the last 12 months of temperature observation data for this station and plot the results as a histogram
+    sql_statement = """
+    SELECT date, tobs
+    FROM measurement
+    WHERE station is "USC00519281";
+    """
+
+    df_temp = pd.read_sql(sql_statement, engine)
+
+    # Sort the dataframe by date
+    df_temp.sort_values(by="date", ascending=False, inplace=True)
+
+    values_int = []
+    # extract year month and day from the most recent date value
+    for i in df_temp['date'].iloc[0].split('-'):
+        values_int.append(int(i))
+    yr, month, day = values_int
+
+    query_date = dt.date(yr, month, day) - dt.timedelta(days=365)
+    data = session.query(Measurement.date, Measurement.tobs).\
+                    where(Measurement.station=='USC00519281').\
+                    filter(Measurement.date >= query_date).all()
+    df_12month_temp = pd.DataFrame(data, columns=['date', 'tobs'])
+
+    temperature_observations = df_12month_temp['tobs'].tolist()
+    
+    return jsonify(temperature_observations)
+
+@app.route('/api/v1.0/<start>')
+def start():
+    pass
+
+
+@app.route('/api/v1.0/<start>/<end>')
+def end():
+    pass
 
 if __name__ == "__main__":
     app.run()
