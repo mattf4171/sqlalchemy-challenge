@@ -1,0 +1,24 @@
+
+* {
+    font-family: "Rubik", "sans-serif";
+}
+
+h1 {
+    color: #990033;
+    font-size: 40pt;
+}
+
+header{
+    color: #E14D2A;
+    font-size: 40pt;
+    font-family: Arial, "sans-serif";
+    text-align: center;
+}
+
+body {
+    background-color: #003057;
+}
+
+a{
+    text-align: center;
+}
