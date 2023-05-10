@@ -80,7 +80,7 @@ def precipitation():
     # add key and value to new dictionary
     for i, key in enumerate(keys.tolist()):
         dict_of_12_month_precipitation[key] = values.tolist()[i]
-    
+    session.close()
     return jsonify(dict_of_12_month_precipitation)
 
 @app.route('/api/v1.0/stations')
@@ -91,7 +91,7 @@ def stations():
     stations_list = []
     for val in stations_tuple:
         stations_list.append(val[0])
-
+    session.close()
     return jsonify(stations_list)
 
 
@@ -123,7 +123,7 @@ def tobs():
     df_12month_temp = pd.DataFrame(data, columns=['date', 'tobs'])
 
     temperature_observations = df_12month_temp['tobs'].tolist()
-    
+    session.close()
     return jsonify(temperature_observations)
 
 # FORMAT MMDDYYYY
@@ -135,25 +135,29 @@ def start(start):
     query_date = dt.date(yr, month, day)
     temperatures = session.query(func.min(Measurement.tobs), func.max(Measurement.tobs), func.sum(Measurement.tobs)/func.count(Measurement.tobs)).\
                 where(Measurement.date >= query_date).all()
+    temperatures = [tuple(row) for row in temperatures]
+    session.close()
     return jsonify(temperatures)
 
 
 @app.route('/api/v1.0/<start>/<end>')
-def end_through_start(start_date, end_date):
-    month = int(start_date[:2])
-    day = int(start_date[2:4])
-    yr = int(start_date[4:])
+def end_through_start(start, end):
+    month = int(start[:2])
+    day = int(start[2:4])
+    yr = int(start[4:])
     query_date = dt.date(yr, month, day)
 
-    month = int(end_date[:2])
-    day = int(end_date[2:4])
-    yr = int(end_date[4:])
+    month = int(end[:2])
+    day = int(end[2:4])
+    yr = int(end[4:])
     query_date_2 = dt.date(yr, month, day)
-
+    
     temperatures = session.query(func.min(Measurement.tobs), func.max(Measurement.tobs), func.sum(Measurement.tobs)/func.count(Measurement.tobs)).\
                 where(Measurement.date >= query_date).where(Measurement.date <= query_date_2).all()
+    
+    temperatures = [tuple(row) for row in temperatures]
+    session.close()
     return jsonify(temperatures)
 
 if __name__ == "__main__":
     app.run()
-    session.close()
