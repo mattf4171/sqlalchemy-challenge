@@ -5,6 +5,8 @@ Flask API based on the queries from climate_starter.ipynb
 """
 
 # Import the dependencies.
+import pandas as pd
+import datetime as dt
 import sqlalchemy
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
@@ -43,12 +45,6 @@ app = Flask(__name__)
 # Initial parameters to render index.html 
 @app.route("/")
 def index():
-    # return (
-    #      f"All Available Routes:<br/>"
-    #     f"/api/v1.0/precipitation<br/>"
-    #     f"/api/v1.0/stations<br/>"
-    #     f"/api/v1.0/tobs<br/>"
-    # )
     return render_template("index.html", err_msg="")
 
 @app.route('/api/v1.0/precipitation')
@@ -130,14 +126,34 @@ def tobs():
     
     return jsonify(temperature_observations)
 
+# FORMAT MMDDYYYY
 @app.route('/api/v1.0/<start>')
-def start():
-    pass
+def start(start):
+    month = int(start[:2])
+    day = int(start[2:4])
+    yr = int(start[4:])
+    query_date = dt.date(yr, month, day)
+    temperatures = session.query(func.min(Measurement.tobs), func.max(Measurement.tobs), func.sum(Measurement.tobs)/func.count(Measurement.tobs)).\
+                where(Measurement.date >= query_date).all()
+    return jsonify(temperatures)
 
 
 @app.route('/api/v1.0/<start>/<end>')
-def end():
-    pass
+def end_through_start(start_date, end_date):
+    month = int(start_date[:2])
+    day = int(start_date[2:4])
+    yr = int(start_date[4:])
+    query_date = dt.date(yr, month, day)
+
+    month = int(end_date[:2])
+    day = int(end_date[2:4])
+    yr = int(end_date[4:])
+    query_date_2 = dt.date(yr, month, day)
+
+    temperatures = session.query(func.min(Measurement.tobs), func.max(Measurement.tobs), func.sum(Measurement.tobs)/func.count(Measurement.tobs)).\
+                where(Measurement.date >= query_date).where(Measurement.date <= query_date_2).all()
+    return jsonify(temperatures)
 
 if __name__ == "__main__":
     app.run()
+    session.close()
