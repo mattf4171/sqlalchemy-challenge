@@ -1,11 +1,17 @@
 
 * {
     font-family: "Rubik", "sans-serif";
+    text-align: center;
 }
 
 h1 {
     color: #990033;
     font-size: 40pt;
+}
+
+h5 {
+    color: #990033;
+    font-size: 30;
 }
 
 header{
@@ -17,6 +23,10 @@ header{
 
 body {
     background-color: #003057;
+}
+
+p{
+    color: #f1c1b6;
 }
 
 a{
