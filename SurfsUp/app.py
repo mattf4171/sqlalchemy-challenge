@@ -56,7 +56,7 @@ def precipitation():
     ORDER BY date ASC;
     """
 
-    # Save the query results as a Pandas DataFrame. Explicitly set the column names
+    # Save the query results as a Pandas DataFrame.
     df_date_precep = pd.read_sql(sql_statement, engine)
 
     # Sort the dataframe by date
@@ -67,7 +67,7 @@ def precipitation():
     for i in df_date_precep['date'].iloc[-1].split('-'):
         values_int.append(int(i))
     yr, month, day = values_int
-
+    # change to pandas datetime to perform operations in query
     query_date = dt.date(yr, month, day) - dt.timedelta(days=365)
 
     data = session.query(Measurement.date, Measurement.prcp).\
@@ -80,6 +80,7 @@ def precipitation():
     # add key and value to new dictionary
     for i, key in enumerate(keys.tolist()):
         dict_of_12_month_precipitation[key] = values.tolist()[i]
+    # close session
     session.close()
     return jsonify(dict_of_12_month_precipitation)
 
@@ -89,8 +90,10 @@ def stations():
     stations_tuple = session.query(Measurement.station).group_by(Measurement.station).\
                 order_by(func.count(Measurement.station).desc()).all()
     stations_list = []
+    # create list from tuple values
     for val in stations_tuple:
         stations_list.append(val[0])
+    # close session
     session.close()
     return jsonify(stations_list)
 
@@ -116,48 +119,60 @@ def tobs():
         values_int.append(int(i))
     yr, month, day = values_int
 
+    # change to pandas datetime to perform operations in query
     query_date = dt.date(yr, month, day) - dt.timedelta(days=365)
     data = session.query(Measurement.date, Measurement.tobs).\
                     where(Measurement.station=='USC00519281').\
                     filter(Measurement.date >= query_date).all()
     df_12month_temp = pd.DataFrame(data, columns=['date', 'tobs'])
-
+    
+    # list of values to return
     temperature_observations = df_12month_temp['tobs'].tolist()
+    # close session
     session.close()
     return jsonify(temperature_observations)
 
 # FORMAT MMDDYYYY
 @app.route('/api/v1.0/<start>')
 def start(start):
+    # extract month, day, yr from start parameter
     month = int(start[:2])
     day = int(start[2:4])
     yr = int(start[4:])
+    # datetime format for query
     query_date = dt.date(yr, month, day)
     temperatures = session.query(func.min(Measurement.tobs), func.max(Measurement.tobs), func.sum(Measurement.tobs)/func.count(Measurement.tobs)).\
                 where(Measurement.date >= query_date).all()
     temperatures = [tuple(row) for row in temperatures]
+    # close session
     session.close()
-    return jsonify(temperatures)
+    return jsonify(temperatures[0])
 
 
 @app.route('/api/v1.0/<start>/<end>')
 def end_through_start(start, end):
+    # extract month, day, yr from start parameter
     month = int(start[:2])
     day = int(start[2:4])
     yr = int(start[4:])
+    # datetime format for query
     query_date = dt.date(yr, month, day)
 
+    # extract month, day, yr from start parameter
     month = int(end[:2])
     day = int(end[2:4])
     yr = int(end[4:])
+    # datetime format for query
     query_date_2 = dt.date(yr, month, day)
-    
+    # run query
     temperatures = session.query(func.min(Measurement.tobs), func.max(Measurement.tobs), func.sum(Measurement.tobs)/func.count(Measurement.tobs)).\
                 where(Measurement.date >= query_date).where(Measurement.date <= query_date_2).all()
-    
+    # list of values to return
     temperatures = [tuple(row) for row in temperatures]
+    # close session
     session.close()
-    return jsonify(temperatures)
+    return jsonify(temperatures[0])
 
 if __name__ == "__main__":
+    # run Flask API
     app.run()
